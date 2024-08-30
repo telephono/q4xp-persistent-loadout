@@ -1,0 +1,113 @@
+use std::collections::{BTreeMap, HashMap};
+use std::fs::File;
+use std::io::{BufReader, Write};
+use std::path::{Path, PathBuf};
+
+use serde::{Deserialize, Serialize};
+
+use xplm::data::{DataRead, DataReadWrite, StringRead};
+use xplm::debugln;
+
+use super::data::BorrowedDataRefs;
+use super::plugin::PluginError;
+use super::plugin::NAME;
+
+#[derive(Default, Serialize, Deserialize)]
+pub struct Loadout {
+    pub m_fuel1: f32,
+    pub m_fuel2: f32,
+}
+
+impl std::fmt::Display for Loadout {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&format!(
+            "tank 1: {}, tank 2: {}",
+            self.m_fuel1, self.m_fuel2
+        ))
+    }
+}
+pub struct Data {
+    path: PathBuf,
+    map: BTreeMap<String, Loadout>,
+}
+
+impl std::fmt::Display for Data {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let data = serde_json::to_string_pretty(&self.map).unwrap_or_default();
+        f.write_str(&data)
+    }
+}
+
+impl Data {
+    pub fn from_file(path: &str) -> std::io::Result<Self> {
+        let path = Path::new(path).to_path_buf();
+
+        let map: BTreeMap<String, Loadout> = match path.try_exists() {
+            Err(e) => return Err(e),
+            Ok(false) => BTreeMap::new(),
+            Ok(true) => {
+                debugln!("{NAME} found loadout file {}", path.to_string_lossy());
+                let file = File::open(Path::new(&path))?;
+                let reader = BufReader::new(&file);
+
+                let map: HashMap<String, Loadout> = serde_json::from_reader(reader)?;
+                let sorted: BTreeMap<String, Loadout> = map
+                    .into_iter()
+                    .map(|(k, v)| (k.to_ascii_lowercase(), v))
+                    .collect();
+
+                sorted
+            }
+        };
+
+        Ok(Self { path, map })
+    }
+
+    pub fn write_into_sim(&self) -> Result<(), PluginError> {
+        let mut datarefs = BorrowedDataRefs::initialize()?;
+
+        let livery_path = datarefs.acf_livery_path.get_as_string().unwrap_or_default();
+        let livery_os_str = Path::new(&livery_path).file_name().unwrap_or_default();
+        let livery = livery_os_str.to_string_lossy().to_string();
+
+        if let Some(loadout) = self.map.get(&livery.to_ascii_lowercase()) {
+            debugln!("{NAME} found loadout for {livery}: {loadout}");
+            datarefs.m_fuel1.set(loadout.m_fuel1);
+            datarefs.m_fuel2.set(loadout.m_fuel2);
+        };
+
+        Ok(())
+    }
+
+    pub fn update_from_sim(&mut self) -> Result<(), PluginError> {
+        let datarefs = BorrowedDataRefs::initialize()?;
+
+        let livery_path = datarefs.acf_livery_path.get_as_string().unwrap_or_default();
+        let livery_os_str = Path::new(&livery_path).file_name().unwrap_or_default();
+        let livery = livery_os_str.to_string_lossy().to_string();
+
+        let m_fuel1 = datarefs.m_fuel1.get();
+        let m_fuel2 = datarefs.m_fuel2.get();
+
+        let loadout = Loadout { m_fuel1, m_fuel2 };
+
+        debugln!("{NAME} updating loadout for {livery}: {loadout}");
+        self.map.insert(livery.to_ascii_lowercase(), loadout);
+
+        Ok(())
+    }
+
+    pub fn write_to_file(&self) -> std::io::Result<()> {
+        debugln!(
+            "{NAME} writing loadout to file {}",
+            self.path.to_string_lossy()
+        );
+
+        let json_data = serde_json::to_string_pretty(&self.map)?;
+
+        let mut file = File::create(&self.path)?;
+        file.write_all(json_data.as_bytes())?;
+
+        Ok(())
+    }
+}
