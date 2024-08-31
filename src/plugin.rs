@@ -51,12 +51,12 @@ impl Plugin for PersistentLoadoutPlugin {
     fn enable(&mut self) -> Result<(), Self::Error> {
         let startup_running: DataRef<i32> = DataRef::find("sim/operation/prefs/startup_running")?;
 
-        if startup_running.get() == 0 {
-            debugln!("{NAME} enabled...");
-            self.handler.schedule_after_loops(60);
-        } else {
+        if startup_running.get() != 0 {
             return Err(PluginError::NoColdAndDarkStartup);
         }
+
+        debugln!("{NAME} enabled...");
+        self.handler.schedule_after_loops(60);
 
         Ok(())
     }
