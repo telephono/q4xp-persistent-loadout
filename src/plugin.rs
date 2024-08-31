@@ -13,6 +13,8 @@ pub static NAME: &str = concat!("Persistent Loadout", " ", "v", env!("CARGO_PKG_
 static SIGNATURE: &str = concat!("com.x-plane.xplm.", env!("CARGO_PKG_NAME"));
 static DESCRIPTION: &str = "Persistent loadout for the FlyJSim Dash 8 Q4XP";
 
+pub static DATA_FILE_PATH: &str = "Output/Q4XP/persistent-loadout.json";
+
 #[derive(Error, Debug)]
 pub enum PluginError {
     #[error(transparent)]
@@ -60,7 +62,7 @@ impl Plugin for PersistentLoadoutPlugin {
     }
 
     fn disable(&mut self) {
-        let mut data = match Data::from_file("Output/Q4XP/persistent-loadout.json") {
+        let mut data = match Data::from_file(DATA_FILE_PATH) {
             Ok(d) => d,
             Err(e) => {
                 debugln!("{NAME} {e}");
