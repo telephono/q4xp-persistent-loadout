@@ -18,6 +18,8 @@ pub static DATA_FILE_PATH: &str = "Output/Q4XP/persistent-loadout.json";
 #[derive(Error, Debug)]
 pub enum PluginError {
     #[error(transparent)]
+    IO(#[from] std::io::Error),
+    #[error(transparent)]
     FindDataRef(#[from] FindError),
     #[error("no cold and dark startup")]
     NoColdAndDarkStartup,
@@ -50,7 +52,6 @@ impl Plugin for PersistentLoadoutPlugin {
 
     fn enable(&mut self) -> Result<(), Self::Error> {
         let startup_running: DataRef<i32> = DataRef::find("sim/operation/prefs/startup_running")?;
-
         if startup_running.get() != 0 {
             return Err(PluginError::NoColdAndDarkStartup);
         }
@@ -62,25 +63,8 @@ impl Plugin for PersistentLoadoutPlugin {
     }
 
     fn disable(&mut self) {
-        let mut data = match Data::from_file(DATA_FILE_PATH) {
-            Ok(d) => d,
-            Err(e) => {
-                debugln!("{NAME} {e}");
-                self.handler.deactivate();
-                return;
-            }
-        };
-
-        if let Err(e) = data.update_from_sim() {
+        if let Err(e) = Data::save_aircraft_loadout() {
             debugln!("{NAME} {e}");
-            self.handler.deactivate();
-            return;
-        }
-
-        if let Err(e) = data.write_to_file() {
-            debugln!("{NAME} {e}");
-            self.handler.deactivate();
-            return;
         }
 
         self.handler.deactivate();
