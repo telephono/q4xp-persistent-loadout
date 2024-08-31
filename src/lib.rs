@@ -1,10 +1,10 @@
-use xplm::xplane_plugin;
-
-mod data;
+mod datarefs;
 mod flight_loop;
 mod loadout;
 mod plugin;
 
-use plugin::PersistentLoadoutPlugin;
+use xplm::xplane_plugin;
+
+pub use plugin::PersistentLoadoutPlugin;
 
 xplane_plugin!(PersistentLoadoutPlugin);

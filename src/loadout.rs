@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 use xplm::data::{DataRead, DataReadWrite, StringRead};
 use xplm::debugln;
 
-use super::data::BorrowedDataRefs;
+use super::datarefs::BorrowedDataRefs;
 use super::plugin::PluginError;
 use super::plugin::NAME;
 
