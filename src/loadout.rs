@@ -5,7 +5,7 @@ use std::path::{Path, PathBuf};
 
 use serde::{Deserialize, Serialize};
 
-use xplm::data::{DataRead, DataReadWrite, StringRead};
+use xplm::data::{DataRead, DataReadWrite};
 use xplm::debugln;
 
 use super::datarefs::BorrowedDataRefs;
@@ -26,6 +26,7 @@ impl std::fmt::Display for Loadout {
         ))
     }
 }
+
 pub struct Data {
     path: PathBuf,
     map: BTreeMap<String, Loadout>,
@@ -83,9 +84,7 @@ impl Data {
     fn write_into_sim(self) -> Result<Self, PluginError> {
         let mut datarefs = BorrowedDataRefs::initialize()?;
 
-        let livery_path = datarefs.acf_livery_path.get_as_string().unwrap_or_default();
-        let livery_os_str = Path::new(&livery_path).file_name().unwrap_or_default();
-        let livery = livery_os_str.to_string_lossy().to_string();
+        let livery = datarefs.livery();
 
         if let Some(loadout) = self.map.get(&livery.to_ascii_lowercase()) {
             debugln!("{NAME} found loadout for {livery}: {loadout}");
@@ -99,9 +98,7 @@ impl Data {
     fn update_from_sim(mut self) -> Result<Self, PluginError> {
         let datarefs = BorrowedDataRefs::initialize()?;
 
-        let livery_path = datarefs.acf_livery_path.get_as_string().unwrap_or_default();
-        let livery_os_str = Path::new(&livery_path).file_name().unwrap_or_default();
-        let livery = livery_os_str.to_string_lossy().to_string();
+        let livery = datarefs.livery();
 
         let m_fuel1 = datarefs.m_fuel1.get();
         let m_fuel2 = datarefs.m_fuel2.get();

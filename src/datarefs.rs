@@ -1,4 +1,5 @@
 use std::fmt::{Debug, Formatter};
+use std::path::Path;
 
 use xplm::data::borrowed::{DataRef, FindError};
 use xplm::data::{DataRead, ReadOnly, ReadWrite, StringRead};
@@ -35,5 +36,13 @@ impl BorrowedDataRefs {
         };
 
         Ok(datarefs)
+    }
+
+    pub fn livery(&self) -> String {
+        let livery_path = self.acf_livery_path.get_as_string().unwrap_or_default();
+        let livery_os_str = Path::new(&livery_path).file_name().unwrap_or_default();
+        let livery = livery_os_str.to_string_lossy().to_string();
+
+        livery
     }
 }
